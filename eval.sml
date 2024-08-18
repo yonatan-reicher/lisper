@@ -89,7 +89,7 @@ local
     | pair (CONS (a1, a)) (CONS (b1, b)) =
     cons (lst [a1, b1]) (pair a b)
 
-  fun assoc x env = ENV.find x env
+  fun assoc x env = ENV.find x env handle Undefined => raise LispError
 
   (* For some reason, only return true if both are atoms? *)
   fun eq (ATOM NIL) (ATOM NIL) = t
@@ -168,39 +168,11 @@ local
       in SOME (if res then t else ATOM NIL)
       end
 
-    and apply (ATOM (SYMBOL s)) (args: SExp list) (env: envs) =
-        (* This is a function call on a variable OR a built in. *)
-        (case eval_built_in env s args of
-           SOME result => result
-         | NONE =>
-             let val head = eval' (ATOM (SYMBOL s)) env
-             in apply head args env end)
-      | apply (CONS (ATOM (SYMBOL "lambda"),
-               CONS (params_sexp,
-               CONS (body_sexp,
-               ATOM NIL)))) args env =
-        (* Function call on a lambda! *)
-        let
-          val SOME param_atoms = sexp_to_list params_sexp
-          val param_names: string list =
-            map (fn p => case p of ATOM (SYMBOL s) => s | _ => raise LispError)
-                param_atoms
-        in
-          if length param_names <> length args then raise LispError
-          else
-            let val new_env = 
-              fn s =>
-                #2 (hd (List.filter (fn (s', _) => s' = s) (zip (param_names,
-                args))))
-            in eval' body_sexp (pushEnv new_env env) end
-        end
-      | apply _ _ _ = raise LispError
-
     and eval' (ATOM NIL) a = ATOM NIL
       | eval' (ATOM (SYMBOL "t")) _ = t
       | eval' (ATOM (SYMBOL s)) env =
       if is_number s then ATOM (SYMBOL s)
-      else (eval' (find s env) env handle Undefined => raise LispError)
+      else (find s env handle Undefined => raise LispError)
       | eval' (e as CONS (ATOM (SYMBOL s), _)) a =
       (case s
          of "quote" => cadr e
@@ -222,10 +194,8 @@ local
           val paramsList = toList params
           val paramNamesList = List.map (fn ATOM (SYMBOL s) => s | _ => raise
           LispError) paramsList
-          val zipped = ListPair.zip (paramNamesList, argsList)
-          val env: env =
-            List.foldl (fn ((x, v), a) => define x a v) (initEnv()) zipped
-      in eval' body (pushEnv env a)
+      in eval' body (pushEnv (toEnv (ListPair.zip (paramNamesList, evlis
+      argsList a))) a)
       end
       | eval' sexp env = raise LispError
 
@@ -233,8 +203,11 @@ local
     if eval' (caar c) a = t then eval' (cadar c) a
     else evcon (cdr c) a
 
-  and evlis (ATOM NIL) _ = ATOM NIL
-    | evlis m a = cons (eval' (car m) a) (evlis (cdr m) a)
+  and evlis [] _ = []
+    | evlis (h::t) a = (eval' h a)::(evlis t a)
+
+  and toEnv [] = ENV.initEnv()
+    | toEnv ((n, v)::t) = define n (toEnv t) v
           
 in
     fun eval (string_exp: string) (env: envs): SExp * envs =
