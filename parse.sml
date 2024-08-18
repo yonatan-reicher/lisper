@@ -10,10 +10,13 @@ fun tokenize x =
        (fn #"(" => " ( "
          | #")" => " ) "
          | #"\n" => " "
+         | #"'" => " ' "
          | c => str c)
        x)
 
 exception BadList of SExp * tokens
+
+fun quote term = CONS (ATOM (SYMBOL "quote"), CONS(term, ATOM NIL))
 
 fun parse_list tokens: SExp * tokens =
     case parse_term tokens of
@@ -29,6 +32,8 @@ and parse_term ("(" :: ")" :: rest) = SOME (ATOM NIL, rest) : (SExp * tokens) op
      of (expr, ")" :: rest) => SOME (expr, rest)
       | (expr, rest) => raise BadList (expr, rest))
   | parse_term (")" :: rest) = NONE
+  | parse_term ("'" :: rest) =
+    Option.map (fn (expr, rest) => (quote expr, rest)) (parse_term rest)
   | parse_term (symbol :: rest) = SOME (ATOM (SYMBOL symbol), rest)
   | parse_term [] = NONE;
 
