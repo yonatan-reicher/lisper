@@ -1,6 +1,6 @@
-structure ENV = struct
+structure Env = struct
 
-open AST
+open Ast
 
 exception Undefined;
 exception Empty;

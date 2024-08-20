@@ -1,8 +1,8 @@
-structure EVAL = struct
+structure Eval = struct
 
-open AST
-open PARSE
-open ENV
+open Ast
+open Parse
+open Env
 
 exception LispError;
 
@@ -89,79 +89,29 @@ local
     | pair (CONS (a1, a)) (CONS (b1, b)) =
     cons (lst [a1, b1]) (pair a b)
 
-  fun assoc x env = ENV.find x env handle Undefined => raise LispError
+  fun assoc x env = Env.find x env handle Undefined => raise LispError
 
   (* For some reason, only return true if both are atoms? *)
   fun eq (ATOM NIL) (ATOM NIL) = t
     | eq (ATOM (SYMBOL s1)) (ATOM (SYMBOL s2)) = if s1 = s2 then t else n
     | eq _ _ = n
 
-    fun eval_built_in env "cons" [car_sexp, cdr_sexp] = let
-          val car = eval' car_sexp env
-          val cdr = eval' cdr_sexp env
-        in
-          SOME (CONS (car, cdr))
-        end
-      | eval_built_in env "car" [arg_sexp] =
-        SOME (case eval' arg_sexp env of
-                CONS (a, _) => a
-              | _ => raise LispError)
-      | eval_built_in env "cdr" [arg_sexp] =
-        SOME (case eval' arg_sexp env of
-                CONS (_, d) => d
-              | _ => raise LispError)
-      | eval_built_in env "quote" [arg_sexp] = SOME arg_sexp
-      | eval_built_in env "atom" [arg_sexp] =
-        SOME (case eval' arg_sexp env of
-                ATOM _ => t
-              | _ => ATOM NIL)
-      | eval_built_in env "null" [arg_sexp] =
-        SOME (case eval' arg_sexp env of
-               ATOM NIL => t
-             | _ => ATOM NIL)
-      | eval_built_in env "eq" [arg1_sexp, arg2_sexp] =
-        let val arg1 = eval' arg1_sexp env
-            val arg2 = eval' arg2_sexp env
-        in
-          (* For some reason, only return true if both are atoms? *)
-          SOME (case (arg1, arg2) of
-                  (ATOM NIL, ATOM NIL) => t
-                | (ATOM (SYMBOL s1), ATOM (SYMBOL s2)) => if s1 = s2 then t else ATOM NIL
-                | _ => ATOM NIL)
-        end
-      | eval_built_in env "cond" [] = SOME (ATOM NIL)
-      | eval_built_in env "cond" (clause::clauses) =
-        (case sexp_to_list clause of
-           SOME [test_sexp, result_sexp] =>
-             (case eval' test_sexp env of
-                ATOM NIL => eval_built_in env "cond" clauses
-              | _ => SOME (eval' result_sexp env))
-          | _ => raise LispError)
-      | eval_built_in env "+" [a, b] = eval_int_op (op +) a b env
-      | eval_built_in env "-" [a, b] = eval_int_op (op -) a b env
-      | eval_built_in env "*" [a, b] = eval_int_op (op *) a b env
-      | eval_built_in env "/" [a, b] = eval_int_op (op div) a b env
-      | eval_built_in env "mod" [a, b] = eval_int_op (op mod) a b env
-      | eval_built_in env "<" [a, b] = eval_comp_op (op <) a b env
-      | eval_built_in env ">" [a, b] = eval_comp_op (op >) a b env
-      | eval_built_in env "=" [a, b] = eval_comp_op (op =) a b env
-      | eval_built_in env "/=" [a, b] = eval_comp_op (op <>) a b env
-      | eval_built_in env "lambda" [params_sexp, body_sexp] =
-        (* Do nothing! Another case handles actual evaluation *)
-        SOME (CONS (ATOM (SYMBOL "lambda"), 
-              CONS (params_sexp,
-              CONS (body_sexp,
-              ATOM NIL))))
-      | eval_built_in env _ _ = NONE
+  fun addNumbers a b =
+    Int.toString (string_to_int a + string_to_int b)
 
-    and eval_int_op f a b env = 
+  fun add (ATOM (SYMBOL a)) (ATOM (SYMBOL b)) =
+    if is_number a andalso is_number b
+    then ATOM (SYMBOL (addNumbers a b))
+    else ATOM (SYMBOL (a ^ b))
+
+  fun eval_int_op f a b env = 
       let val a = eval' a env
           val b = eval' b env
           val res = f (sexp_to_int a, sexp_to_int b)
       in SOME (ATOM (SYMBOL (Int.toString res)))
       end
 
-    and eval_comp_op f a b env =
+  and eval_comp_op f a b env =
       let val a = eval' a env
           val b = eval' b env
           val res = f (sexp_to_int a, sexp_to_int b)
@@ -180,6 +130,7 @@ local
           | "eq" => eq (eval' (cadr e) a) (eval' (caddr e) a)
           | "car" => car (eval' (cadr e) a)
           | "cdr" => cdr (eval' (cadr e) a)
+          | "+" => add (eval' (cadr e) a) (eval' (caddr e) a)
           | "cons" => cons (eval' (cadr e) a) (eval' (caddr e) a)
           | "cond" => evcon (cdr e) a
           | _ => eval' (cons (assoc s a) (cdr e)) a)
@@ -206,10 +157,12 @@ local
   and evlis [] _ = []
     | evlis (h::t) a = (eval' h a)::(evlis t a)
 
-  and toEnv [] = ENV.initEnv()
+  and toEnv [] = Env.initEnv()
     | toEnv ((n, v)::t) = define n (toEnv t) v
           
 in
+    val eval' = eval'
+
     fun eval (string_exp: string) (env: envs): SExp * envs =
         let val exp = parse (tokenize string_exp) in
             (eval' exp env, env)
