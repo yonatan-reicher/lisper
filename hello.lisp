@@ -1,0 +1,1 @@
+(cons "Hello" (cons " World!" '()))

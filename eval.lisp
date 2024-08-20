@@ -1,11 +1,6 @@
 ((lambda (null and not append pair assoc eval evcon evlis)
     (eval '
-        ((label f (lambda (a b)
-            (cond
-               ((eq a '()) b)
-               ('t (cons (car a) (f (cdr a) b)))
-            )
-        )) '(1 2 3) '(4 5 6))
+          (cons "Hello" (cons " World!" '()))
       ())
  )
  '(lambda (x) (eq x '()))
