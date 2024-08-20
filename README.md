@@ -2,9 +2,16 @@
 
 A LISP interpreter adapted from HW4 and HW3
 
+- [Differences To HW3 Lisp](#differences-to-hw3-lisp)
 - [Usage](#usage)
   - [Repl Main Functions](#repl-main-functions)
 - [Example Files](#example-files)
+
+## Differences To HW3 Lisp
+
+All built-in number functions have been taken out to keep the evaluator
+smaller. Additionally, added `+` for string concatination (without it,
+the parser could not produce new symbols).
 
 ## Usage
 
@@ -37,12 +44,16 @@ Main.doRepl();
 
 ## Example Files
 
-* `hello.lisp` - Just a simple hello world.
-                 Run with `Main.evalFile "hello.lisp"`.
-* `rev.lisp` - A function that reverses a string.
-               Run with `Main.evalFileOn "rev.lisp" "abcd";`.
-* `parse.lisp` - An S-Expression parser written in lisp.
-                 Run with `Main.evalFileOn "parse.lisp" "(cons 'a 'b)";`.
-* `eval.lisp` - An S-Expression parser written in lisp.
-                Run with `Main.evalFile "eval.lisp"`.
-                To change the input, modify the third line.
+* `hello.lisp`  
+  Just a simple hello world.  
+  Run with `Main.evalFile "hello.lisp";`.
+* `rev.lisp`  
+  A function that reverses a string.  
+  Run with `Main.evalFileOn "rev.lisp" "abcd";`.
+* `parse.lisp`  
+  An S-Expression parser written in lisp.  
+  Run with `Main.evalFileOn "parse.lisp" "(cons 'a 'b)";`.
+* `eval.lisp`  
+  An S-Expression parser written in lisp.  
+  Run with `Main.evalFile "eval.lisp";`.
+  To change the input, modify the third line.
